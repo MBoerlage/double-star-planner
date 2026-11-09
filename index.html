@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Double Star Planner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bd:#30363d;--tx:#e6edf3;--mu:#8b949e;--dm:#586069;--ac:#58a6ff;--gr:#3fb950;--or:#ffa657;--rd:#f85149;--ye:#e3b341}
+body.red{--bg:#000;--bg2:#0a0000;--bg3:#170000;--bd:#3a0000;--tx:#ff4a3d;--mu:#b02a22;--dm:#701812;--ac:#ff6a5e;--gr:#ff4a3d;--or:#e03a30;--rd:#ff7a70;--ye:#ff4a3d}
+html,body{height:100%}
+body{background:var(--bg);color:var(--tx);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
+header{display:flex;align-items:center;gap:10px;padding:0 12px;height:44px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0;white-space:nowrap}
+.brand{font-weight:600;font-size:14px;margin-right:6px}
+button,select,input{font:inherit;color:var(--tx)}
+button{background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:3px 10px;cursor:pointer}
+button:hover{border-color:var(--ac)}
+button.pri{background:var(--ac);border-color:var(--ac);color:#000;font-weight:600}
+button.ghost{background:none}
+input,select{background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:2px 6px;min-width:0}
+input:focus,select:focus{outline:none;border-color:var(--ac)}
+input[type=number]{width:62px}
+input[type=checkbox]{accent-color:var(--ac)}
+#night-info{margin-left:auto;color:var(--mu);font-size:12px}
+main{display:flex;flex:1;min-height:0}
+#side{width:268px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--bd);overflow-y:auto;padding:10px 12px 20px}
+.sec{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px;border-top:1px solid var(--bd);padding-top:10px}
+.sec:first-child{margin-top:0;border:none;padding-top:0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;color:var(--mu);font-size:12px}
+.row>span:first-child{flex-shrink:0}
+.row input[type=text],.row select{flex:1;width:0}
+.chk{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;cursor:pointer}
+.note{font-size:11px;color:var(--mu);line-height:1.4;margin:4px 0 2px}
+.note b{color:var(--tx);font-weight:600}
+#center{flex:1;display:flex;flex-direction:column;min-width:0}
+#tabs{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-shrink:0}
+.tab{background:none;border:1px solid transparent;color:var(--mu)}
+.tab.on{border-color:var(--bd);background:var(--bg3);color:var(--tx)}
+#tabs .sp{flex:1}
+#status{font-size:12px;color:var(--mu);padding:5px 12px;border-bottom:1px solid var(--bd);flex-shrink:0;min-height:27px}
+#tw{flex:1;overflow:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th{position:sticky;top:0;background:var(--bg2);text-align:left;font-weight:600;font-size:11px;color:var(--mu);padding:5px 8px;border-bottom:1px solid var(--bd);white-space:nowrap;cursor:pointer;user-select:none}
+th.ns{cursor:default}
+td{padding:4px 8px;border-bottom:1px solid var(--bg3);white-space:nowrap}
+td.wrap{white-space:normal;min-width:240px;color:var(--mu);font-size:12px}
+tr.r{cursor:pointer}
+tr.r:hover td{background:var(--bg2)}
+tr.sel td{background:var(--bg3)}
+tr.grp td{background:var(--bg2);color:var(--mu);font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px}
+.num{text-align:right}
+.c-P{color:var(--gr)}.c-U{color:var(--ye)}.c-O{color:var(--mu)}.c-X{color:var(--rd)}
+.r-Easy{color:var(--gr)}.r-OK{color:var(--tx)}.r-Hard{color:var(--or)}.r-No{color:var(--rd)}
+.warn{color:var(--or)}
+.x{background:none;border:none;color:var(--mu);padding:0 4px}
+#detail{width:320px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--bd);overflow-y:auto;padding:12px}
+#detail h2{font-size:15px;margin-bottom:2px}
+#detail .sub{color:var(--mu);font-size:12px;margin-bottom:10px}
+.kv{display:grid;grid-template-columns:104px 1fr;gap:3px 8px;font-size:12px;margin-bottom:10px}
+.kv span:nth-child(odd){color:var(--mu)}
+canvas{display:block;width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:6px;margin-bottom:10px}
+a{color:var(--ac);text-decoration:none}
+a:hover{text-decoration:underline}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:10}
+#ov .box{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:18px;width:320px}
+#ov h3{margin-bottom:12px;font-size:14px}
+#ov .row input{flex:1}
+#fatal{padding:40px;max-width:640px;line-height:1.6}
+@media print{
+  body{overflow:visible;background:#fff;color:#000;--tx:#000;--mu:#333;--bg2:#fff;--bg3:#ddd;--bd:#999;--gr:#000;--ye:#000;--or:#000;--rd:#000;--ac:#000}
+  header,#side,#detail,#tabs,.x,.noprint{display:none!important}
+  #app,main,#center,#tw{display:block;height:auto;overflow:visible}
+  td,th{font-size:10px;padding:2px 5px}th{position:static}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <span class="brand">Double Star Planner</span>
+  <button id="loc-btn" title="Change observing site">Site</button>
+  <label>Night of <input type="date" id="date"></label>
+  <span id="night-info"></span>
+  <button id="red-btn" class="ghost" title="Red night-vision colours">Night mode</button>
+</header>
+<main>
+<aside id="side">
+  <div class="sec">Category</div>
+  <label class="chk"><input type="checkbox" id="cls-P"> <span class="c-P">Physical</span> <span class="note" id="n-P"></span></label>
+  <label class="chk"><input type="checkbox" id="cls-U"> <span class="c-U">Uncertain</span> <span class="note" id="n-U"></span></label>
+  <label class="chk"><input type="checkbox" id="cls-O"> <span class="c-O">Optical</span> <span class="note" id="n-O"></span></label>
+  <label class="chk"><input type="checkbox" id="cls-X"> <span class="c-X">Dubious (WDS "X")</span></label>
+
+  <div class="sec">Telescope</div>
+  <div class="row"><span>Preset</span><select id="preset"></select></div>
+  <div class="row"><span>Aperture (inch)</span><input type="number" id="ap" min="1" max="60" step="0.1"></div>
+  <div class="row"><span>Focal ratio f/</span><input type="number" id="fr" min="1" max="30" step="0.1"></div>
+  <div class="row"><span>Eyepieces (mm)</span><input type="text" id="eps" placeholder="25, 10, 5" title="One or more focal lengths, comma separated. Multiply the telescope's focal length for a Barlow by entering the equivalent shorter eyepiece."></div>
+  <label class="chk"><input type="checkbox" id="limitEp"> Only pairs my eyepieces can separate</label>
+  <div class="note" id="eq-note"></div>
+
+  <div class="sec">Sky conditions</div>
+  <div class="row"><span>Naked-eye limit (mag)</span><input type="number" id="nelm" min="2" max="7.5" step="0.1" title="Faintest star visible without optics at your site. About 4 city, 5 suburb, 6 rural, 7 dark site."></div>
+  <div class="row"><span>Seeing (arcsec)</span><input type="number" id="seeing" min="0.3" max="6" step="0.1"></div>
+  <div class="row"><span>Show</span><select id="minRating"><option value="2">Easy splits only</option><option value="1">Splittable</option><option value="0.7">Include hard ones</option></select></div>
+
+  <div class="sec">Observing window</div>
+  <div class="row"><span>Start</span><select id="startMode"><option value="sunset">Sunset</option><option value="civil">Civil dusk (−6°)</option><option value="naut">Nautical dusk (−12°)</option><option value="astro">Astronomical dusk (−18°)</option><option value="custom">Fixed time</option></select></div>
+  <div class="row" id="startTime-row"><span>Start time</span><input type="time" id="startTime"></div>
+  <div class="row"><span>End time</span><input type="time" id="endTime"></div>
+  <div class="row"><span>Minimum altitude (°)</span><input type="number" id="minAlt" min="0" max="80" step="1"></div>
+  <div class="row"><span>Visible at least (min)</span><input type="number" id="minVis" min="5" max="600" step="5"></div>
+
+  <div class="sec">Narrow down</div>
+  <div class="row"><span>Primary brighter than</span><input type="number" id="m1max" step="0.5" placeholder="any"></div>
+  <div class="row"><span>Separation (″)</span><span><input type="number" id="sepMin" step="0.5" placeholder="min" style="width:56px"> – <input type="number" id="sepMax" step="1" placeholder="max" style="width:56px"></span></div>
+  <div class="row"><span>Constellation</span><select id="con"></select></div>
+  <div class="row"><span>Find</span><input type="text" id="q" placeholder="STF 60, 00527-2400…"></div>
+  <label class="chk"><input type="checkbox" id="hideIR"> Hide pairs with infrared-only magnitudes</label>
+
+  <div class="sec">Tonight's list</div>
+  <div class="row"><span>Number of targets</span><input type="number" id="N" min="1" max="200" step="1"></div>
+  <div class="row"><span>Max per constellation</span><input type="number" id="perCon" min="1" max="50" step="1"></div>
+  <button class="pri" id="suggest" style="width:100%;margin-top:4px">Suggest tonight's list</button>
+  <div class="note" id="cat-note" style="margin-top:14px"></div>
+</aside>
+
+<section id="center">
+  <div id="tabs">
+    <button class="tab" id="tab-cand">Candidates</button>
+    <button class="tab" id="tab-night">Tonight's list</button>
+    <span class="sp"></span>
+    <span id="night-tools" style="display:none">
+      <button id="csv" class="pri">Export CSV</button>
+      <button id="print">Print</button>
+      <button id="clear" class="ghost">Clear</button>
+    </span>
+  </div>
+  <div id="status"></div>
+  <div id="tw"><table><thead id="th"></thead><tbody id="tb"></tbody></table></div>
+</section>
+
+<aside id="detail"><div class="note">Select a pair to see its details, altitude through the night and position-angle sketch.</div></aside>
+</main>
+</div>
+
+<div id="ov"><div class="box">
+  <h3>Observing site</h3>
+  <div class="row"><span>Name</span><input type="text" id="li-name"></div>
+  <div class="row"><span>Latitude (°N +)</span><input type="number" id="li-lat" step="0.0001" style="width:auto"></div>
+  <div class="row"><span>Longitude (°E +)</span><input type="number" id="li-lon" step="0.0001" style="width:auto"></div>
+  <div class="note" id="li-msg">Times are shown in this computer's time zone.</div>
+  <div style="display:flex;gap:8px;margin-top:12px"><button id="li-gps">Use my location</button><span style="flex:1"></span><button id="li-cancel" class="ghost">Cancel</button><button id="li-save" class="pri">Save</button></div>
+</div></div>
+
+<script src="wds_data.js"></script>
+<script id="app-js">
+'use strict';
+/* ============================================================
+   Core: astronomy, equipment model, filtering, scheduling.
+   No DOM access in this half, so it can be tested under Node.
+   ============================================================ */
+const D2R = Math.PI / 180, SID = 1.00273791;
+// column indices in WDS rows
+const C = {id:0, disc:1, comp:2, last:3, nobs:4, pa:5, sep:6, m1:7, m2:8, sp:9, cls:10, flags:11, ra:12, dec:13, con:14};
+const CLS_NAME = {P:'Physical', U:'Uncertain', O:'Optical', X:'Dubious'};
+const PRESETS = [
+  {name:'10" f/3.8 Newtonian', ap:10, fr:3.8},
+  {name:'8" f/4 Newtonian', ap:8, fr:4},
+  {name:'8" f/10 SCT', ap:8, fr:10},
+];
+const DEFAULTS = {
+  loc:{name:'Houston, TX', lat:29.7604, lon:-95.3698},
+  date:null, startMode:'naut', startTime:'19:00', endTime:'00:00', minAlt:20, minVis:30,
+  ap:10, fr:3.8, eps:'25', limitEp:true, nelm:5, seeing:2, minRating:'1',
+  cls:{P:true, U:true, O:false, X:false}, hideIR:true,
+  m1max:'', sepMin:'', sepMax:120, con:'', q:'', N:30, perCon:5,
+  night:[], red:false, tab:'cand', sort:'score', sortDir:-1,
+};
+// Apparent separation (arcsec at the eye) needed to see a pair as two stars.
+const EYE_ARCSEC = 150;
+
+function jd(d){ return d.getTime() / 86400000 + 2440587.5; }
+function gmst(j){ const d = j - 2451545, T = d / 36525; return ((280.46061837 + 360.98564736629 * d + 0.000387933 * T * T) % 360 + 360) % 360; }
+function sunEq(date){
+  const n = jd(date) - 2451545, L = (280.460 + 0.9856474 * n) % 360, g = (357.528 + 0.9856003 * n) * D2R;
+  const lam = (L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * D2R, eps = (23.439 - 4e-7 * n) * D2R;
+  return {ra:(Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam)) / D2R + 360) % 360, dec:Math.asin(Math.sin(eps) * Math.sin(lam)) / D2R, lon:(lam / D2R + 360) % 360};
+}
+function moonInfo(date){
+  const d = jd(date) - 2451545, L = 218.316 + 13.176396 * d, M = (134.963 + 13.064993 * d) * D2R;
+  const lon = L + 6.289 * Math.sin(M), el = ((lon - sunEq(date).lon) % 360 + 360) % 360;
+  return {illum:(1 - Math.cos(el * D2R)) / 2, waxing:el < 180};
+}
+function altAz(ra, dec, lat, lstDeg){
+  const H = (lstDeg - ra) * D2R, d = dec * D2R, p = lat * D2R;
+  const sa = Math.sin(d) * Math.sin(p) + Math.cos(d) * Math.cos(p) * Math.cos(H);
+  const alt = Math.asin(Math.max(-1, Math.min(1, sa)));
+  const az = Math.atan2(-Math.cos(d) * Math.sin(H), Math.sin(d) * Math.cos(p) - Math.cos(d) * Math.sin(p) * Math.cos(H));
+  return {alt:alt / D2R, az:(az / D2R + 360) % 360};
+}
+function sunAlt(date, loc){ const s = sunEq(date); return altAz(s.ra, s.dec, loc.lat, gmst(jd(date)) + loc.lon).alt; }
+function parseDate(s){ const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12, 0, 0); }
+function hm(s, def){ const m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] + +m[2] / 60 : def; }
+
+/* The observing window for the evening of S.date, in the computer's local time. */
+function nightWindow(S){
+  const noon = parseDate(S.date), ev = {};
+  const lim = {sunset:-0.833, civil:-6, naut:-12, astro:-18};
+  let prev = sunAlt(noon, S.loc);
+  for (let m = 1; m <= 1440; m++){
+    const t = new Date(noon.getTime() + m * 60000), a = sunAlt(t, S.loc);
+    for (const k in lim){
+      if (prev > lim[k] && a <= lim[k] && !ev[k]) ev[k] = t;
+      if (prev < lim[k] && a >= lim[k] && ev[k] && !ev[k + 'Dawn']) ev[k + 'Dawn'] = t;
+    }
+    prev = a;
+  }
+  const at = h => new Date(noon.getTime() + ((h < 12 ? h + 24 : h) - 12) * 3600000);
+  let start = S.startMode === 'custom' ? at(hm(S.startTime, 19)) : (ev[S.startMode] || ev.sunset || at(19));
+  let end = at(hm(S.endTime, 0));
+  if (end <= start) end = new Date(start.getTime() + 3600000);
+  const hours = (end - start) / 3600000;
+  return {start, end, hours, ev, lst0:(gmst(jd(start)) + S.loc.lon + 360) % 360,
+          lateEnd: ev.nautDawn && end > ev.nautDawn};
+}
+
+/* What the telescope, eyepieces and sky can do. */
+function equipment(S){
+  const D = S.ap * 25.4, F = D * S.fr;
+  const eps = String(S.eps).split(/[,;\s]+/).map(Number).filter(x => x > 0).sort((a, b) => b - a)
+    .map(fl => ({fl, mag:F / fl, pupil:fl / S.fr}));
+  const dawes = 116 / D, base = Math.max(dawes, 0.6 * S.seeing);
+  return {D, F, eps, dawes, base, lm:S.nelm - 4 + 5 * Math.log10(D)};
+}
+/* Separation needed to split a pair: the working resolution, widened for unequal pairs. */
+function reqSep(E, dm){ return E.base * (1 + 0.33 * Math.pow(dm, 1.5)); }
+function rating(ratio){ return ratio >= 2 ? 'Easy' : ratio >= 1 ? 'OK' : ratio >= 0.7 ? 'Hard' : 'No'; }
+function pickEyepiece(E, sep){
+  const need = EYE_ARCSEC / Math.max(sep, 0.01);
+  for (const e of E.eps) if (e.mag >= need) return e;
+  return null;
+}
+
+const SP_COL = {O:['blue-white', -2], B:['blue-white', -2], A:['white', -1], F:['yellow-white', 0], G:['yellow', 1], K:['orange', 2], M:['orange-red', 3], C:['deep red', 4], N:['deep red', 4], R:['deep red', 4], S:['deep red', 4]};
+function colours(sp){
+  if (!sp) return [];
+  return sp.split('+').map(p => { const m = /[OBAFGKMCNRS]/.exec(p.replace(/^[a-z]+/, '')); return m ? SP_COL[m[0]] : null; }).filter(Boolean);
+}
+
+/* When is a position above the minimum altitude inside the window? Hours after window start. */
+function visibility(ra, dec, S, W){
+  const p = S.loc.lat * D2R, d = dec * D2R;
+  const ch = (Math.sin(S.minAlt * D2R) - Math.sin(p) * Math.sin(d)) / (Math.cos(p) * Math.cos(d));
+  if (ch >= 1) return null;
+  const h0 = ch <= -1 ? 12 / SID : Math.acos(ch) / D2R / 15 / SID;
+  const tr = (((ra - W.lst0) % 360 + 540) % 360 - 180) / 15 / SID;
+  let best = null;
+  for (const k of [-1, 0, 1]){
+    const c = tr + k * 24 / SID, a = Math.max(0, c - h0), b = Math.min(W.hours, c + h0);
+    if (b > a && (!best || b - a > best.to - best.from)) best = {from:a, to:b, tr:c, set:c + h0};
+  }
+  if (!best) return null;
+  const altAt = t => altAz(ra, dec, S.loc.lat, W.lst0 + t * 15 * SID).alt;
+  best.maxAlt = best.tr >= best.from && best.tr <= best.to ? 90 - Math.abs(S.loc.lat - dec) : Math.max(altAt(best.from), altAt(best.to));
+  return best;
+}
+
+/* 0-100: how rewarding a pair is at the eyepiece with this equipment. */
+function score(r, E, ratio){
+  const m1 = r[C.m1], m2 = r[C.m2], sep = r[C.sep];
+  const clamp = x => Math.max(0, Math.min(1, x));
+  let s = 30 * clamp((11 - m1) / 9) + 15 * clamp((E.lm - m2) / 5);
+  s += ratio < 1 ? 5 * ratio : ratio < 2 ? 10 + 8 * (ratio - 1) : 20 * (sep > 60 ? Math.max(0.2, 1 - (sep - 60) / 120) : 1);
+  const col = colours(r[C.sp]);
+  if (col.length > 1 && Math.abs(col[0][1] - col[1][1]) >= 2) s += 15;
+  else if (col.length && col[0][1] >= 2) s += 8;
+  s += 15 * clamp(Math.log10(r[C.nobs] + 1) / 2.5);
+  s += r[C.cls] === 'P' ? 5 : r[C.cls] === 'O' ? -5 : 0;
+  return s;
+}
+
+/* Evaluate one pair against equipment and night; null if it never clears the altitude limit. */
+function evaluate(i, S, W, E){
+  const r = WDS[i], v = visibility(r[C.ra], r[C.dec], S, W);
+  const ratio = r[C.sep] / reqSep(E, Math.abs(r[C.m2] - r[C.m1]));
+  return {i, ratio, rating:rating(ratio), ep:pickEyepiece(E, r[C.sep]), magOK:Math.max(r[C.m1], r[C.m2]) <= E.lm,
+          vis:v, score:score(r, E, ratio)};
+}
+
+function filterCatalog(S, W, E){
+  const out = [], minR = +S.minRating, q = S.q.trim().toUpperCase().replace(/\s+/g, ' ');
+  const m1max = S.m1max === '' ? 99 : +S.m1max, sMin = S.sepMin === '' ? 0 : +S.sepMin, sMax = S.sepMax === '' ? 1e9 : +S.sepMax;
+  const con = S.con === '' ? -1 : WDS_META.cons.indexOf(S.con), minVis = S.minVis / 60;
+  for (let i = 0; i < WDS.length; i++){
+    const r = WDS[i];
+    if (!S.cls[r[C.cls]]) continue;
+    if (con >= 0 && r[C.con] !== con) continue;
+    if (r[C.m1] > m1max || r[C.sep] < sMin || r[C.sep] > sMax) continue;
+    if (Math.max(r[C.m1], r[C.m2]) > E.lm) continue;
+    if (S.hideIR && r[C.flags].includes('K')) continue;
+    if (q && !(r[C.id].startsWith(q) || (r[C.disc] + ' ' + r[C.comp]).startsWith(q))) continue;
+    const ratio = r[C.sep] / reqSep(E, Math.abs(r[C.m2] - r[C.m1]));
+    if (ratio < minR) continue;
+    const ep = pickEyepiece(E, r[C.sep]);
+    if (S.limitEp && !ep) continue;
+    const v = visibility(r[C.ra], r[C.dec], S, W);
+    if (!v || v.to - v.from < minVis) continue;
+    out.push({i, ratio, rating:rating(ratio), ep, magOK:true, vis:v, score:score(r, E, ratio)});
+  }
+  return out;
+}
+
+/* Best-scoring pairs, limited per constellation and to two pairs per multiple system. */
+function suggest(cands, N, perCon){
+  const byScore = cands.slice().sort((a, b) => b.score - a.score), nCon = {}, nSys = {}, out = [];
+  for (const c of byScore){
+    const r = WDS[c.i], k = r[C.con], id = r[C.id];
+    if ((nCon[k] || 0) >= perCon || (nSys[id] || 0) >= 2) continue;
+    nCon[k] = (nCon[k] || 0) + 1; nSys[id] = (nSys[id] || 0) + 1;
+    out.push(c);
+    if (out.length >= N) break;
+  }
+  return out;
+}
+
+function angSep(a, b){
+  const d1 = a[C.dec] * D2R, d2 = b[C.dec] * D2R, dr = (a[C.ra] - b[C.ra]) * D2R;
+  return Math.acos(Math.max(-1, Math.min(1, Math.sin(d1) * Math.sin(d2) + Math.cos(d1) * Math.cos(d2) * Math.cos(dr)))) / D2R;
+}
+
+/* Order the night: finish one constellation before the next, taking first the
+   constellation that drops below the altitude limit soonest (west to east). */
+function schedule(items, W){
+  const dwell = Math.min(10 / 60, W.hours / Math.max(1, items.length));
+  const rem = items.filter(x => x.vis), out = [];
+  let t = 0, prev = null;
+  while (rem.length){
+    let avail = rem.filter(x => x.vis.from <= t + 1e-6 && x.vis.to >= t);
+    if (!avail.length){
+      const later = rem.filter(x => x.vis.from > t);
+      if (!later.length) break;
+      t = Math.min(...later.map(x => x.vis.from));
+      continue;
+    }
+    const setOf = {};
+    for (const x of avail){ const k = WDS[x.i][C.con]; setOf[k] = Math.min(setOf[k] ?? 1e9, x.vis.set); }
+    const con = +Object.keys(setOf).sort((a, b) => setOf[a] - setOf[b])[0];
+    for (;;){
+      const here = rem.filter(x => WDS[x.i][C.con] === con && x.vis.from <= t + 1e-6 && x.vis.to >= t);
+      if (!here.length) break;
+      here.sort((a, b) => prev ? angSep(WDS[a.i], WDS[prev.i]) - angSep(WDS[b.i], WDS[prev.i]) : a.vis.set - b.vis.set);
+      const x = here[0];
+      x.t = t; x.flag = t > W.hours ? 'after window end' : '';
+      out.push(x); rem.splice(rem.indexOf(x), 1); prev = x; t += dwell;
+    }
+  }
+  for (const x of rem){ x.t = null; x.flag = 'sets before it can be reached'; out.push(x); }
+  for (const x of items) if (!x.vis){ x.t = null; x.flag = 'below altitude limit all window'; out.push(x); }
+  return out;
+}
+
+const FLAG_TXT = {O:'orbit computed', V:'proper motion indicates physical', T:'same parallax and proper motion', Z:'same parallax',
+  L:'linear solution', U:'proper motion indicates non-physical', S:'different parallax and proper motion', Y:'different parallax',
+  C:'both orbit and linear solution published', X:'dubious double'};
+function wdsRemarks(r){
+  const out = [], why = [...r[C.flags]].filter(f => FLAG_TXT[f]).map(f => FLAG_TXT[f]);
+  out.push(CLS_NAME[r[C.cls]] + (why.length ? ' (' + why.join(', ') + ')' : ''));
+  const col = colours(r[C.sp]);
+  if (col.length > 1) out.push(col[0][0] === col[1][0] ? 'Both ' + col[0][0] : 'Colours: ' + col[0][0] + ' and ' + col[1][0]);
+  else if (col.length) out.push('Primary ' + col[0][0]);
+  if (r[C.comp] && r[C.comp] !== 'AB') out.push('Pair ' + r[C.comp] + ' of a multiple system');
+  if (r[C.flags].includes('O')) out.push('Separation changes with the orbit');
+  if (r[C.flags].includes('K')) out.push('Magnitudes are infrared');
+  if (r[C.flags].includes('N')) out.push('See WDS notes');
+  return out.join('. ');
+}
+
+function pad(n, w = 2){ return String(n).padStart(w, '0'); }
+function fmtRA(d){ let s = Math.round(d / 15 * 36000) / 10; const h = Math.floor(s / 3600) % 24; s -= Math.floor(s / 3600) * 3600; const m = Math.floor(s / 60); return `${pad(h)}h${pad(m)}m${(s - m * 60).toFixed(1).padStart(4, '0')}s`; }
+function fmtDec(d){ let s = Math.round(Math.abs(d) * 3600); const dd = Math.floor(s / 3600); s -= dd * 3600; const m = Math.floor(s / 60); return `${d < 0 ? '-' : '+'}${pad(dd)}°${pad(m)}'${pad(s - m * 60)}"`; }
+function fmtT(d){ return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function tAt(W, h){ return new Date(W.start.getTime() + h * 3600000); }
+function pairName(r){ return r[C.disc] + (r[C.comp] ? ' ' + r[C.comp] : ''); }
+function keyOf(r){ return r[C.id] + '|' + r[C.disc] + '|' + r[C.comp]; }
+function epTxt(x){ return x.ep ? `${x.ep.fl} mm (${Math.round(x.ep.mag)}×)` : `needs ${Math.ceil(EYE_ARCSEC / Math.max(WDS[x.i][C.sep], 0.01))}×`; }
+
+function csvRows(list, S, W){
+  const head = ['Order', 'Time', 'Pair', 'WDS', 'Constellation', 'RA (J2000)', 'Dec (J2000)', 'Mag A', 'Mag B', 'Delta mag', 'Sep (arcsec)', 'PA (deg)',
+    'Spectral type', 'Category', 'Split', 'Eyepiece', 'Alt (deg)', 'Az (deg)', 'Visible from', 'Visible until', 'Last measured', 'Measures', 'Remarks', 'Schedule note'];
+  const rows = [head];
+  list.forEach((x, n) => {
+    const r = WDS[x.i], aa = x.t != null ? altAz(r[C.ra], r[C.dec], S.loc.lat, W.lst0 + x.t * 15 * SID) : null;
+    rows.push([n + 1, x.t != null ? fmtT(tAt(W, x.t)) : '', pairName(r), r[C.id], WDS_META.cons[r[C.con]], fmtRA(r[C.ra]), fmtDec(r[C.dec]),
+      r[C.m1], r[C.m2], Math.abs(r[C.m2] - r[C.m1]).toFixed(1), r[C.sep], r[C.pa] >= 0 ? r[C.pa] : '', r[C.sp], CLS_NAME[r[C.cls]], x.rating, epTxt(x),
+      aa ? Math.round(aa.alt) : '', aa ? Math.round(aa.az) : '', x.vis ? fmtT(tAt(W, x.vis.from)) : '', x.vis ? fmtT(tAt(W, x.vis.to)) : '',
+      r[C.last] || '', r[C.nobs], wdsRemarks(r), x.flag || '']);
+  });
+  return rows;
+}
+function toCSV(rows){ return '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\r\n') + '\r\n'; }
+
+if (typeof module !== 'undefined') module.exports = {C, DEFAULTS, nightWindow, equipment, reqSep, filterCatalog, suggest, schedule, evaluate, csvRows, toCSV, wdsRemarks, visibility, altAz, fmtRA, fmtDec, sunAlt, moonInfo, keyOf, pairName};
+
+/* ============================================================
+   User interface
+   ============================================================ */
+if (typeof document !== 'undefined') (function(){
+  const $ = id => document.getElementById(id);
+  if (typeof WDS === 'undefined'){
+    $('app').innerHTML = '<div id="fatal"><h2>Catalogue data not found</h2><p>This page needs <b>wds_data.js</b> next to it. Create it by running <code>python tools/build_catalog.py</code> in the DoubleStarObsTool folder (add <code>--download</code> to fetch the latest Washington Double Star Catalog first).</p></div>';
+    return;
+  }
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  let S = JSON.parse(JSON.stringify(DEFAULTS)), W, E, cands = [], night = [], selKey = null;
+  try { const o = JSON.parse(localStorage.getItem('dsp_state') || '{}'); S = Object.assign(S, o); S.cls = Object.assign({}, DEFAULTS.cls, o.cls); } catch (e) {}
+  if (!S.date){ const n = new Date(); if (n.getHours() < 6) n.setDate(n.getDate() - 1); S.date = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`; }
+  const save = () => { try { localStorage.setItem('dsp_state', JSON.stringify(S)); } catch (e) {} };
+  const index = new Map(); WDS.forEach((r, i) => index.set(keyOf(r), i));
+
+  // ---- inputs ----
+  const FIELDS = ['ap', 'fr', 'eps', 'nelm', 'seeing', 'minRating', 'startMode', 'startTime', 'endTime', 'minAlt', 'minVis', 'm1max', 'sepMin', 'sepMax', 'con', 'q', 'N', 'perCon'];
+  const NUMERIC = ['ap', 'fr', 'nelm', 'seeing', 'minAlt', 'minVis', 'N', 'perCon'];
+  $('preset').innerHTML = '<option value="">Custom</option>' + PRESETS.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join('');
+  $('con').innerHTML = '<option value="">All</option>' + WDS_META.cons.map(c => `<option>${c}</option>`).join('');
+  function toInputs(){
+    for (const f of FIELDS) $(f).value = S[f];
+    for (const k of 'PUOX') $('cls-' + k).checked = !!S.cls[k];
+    $('limitEp').checked = S.limitEp; $('hideIR').checked = S.hideIR; $('date').value = S.date;
+    derived();
+  }
+  function derived(){
+    $('preset').value = String(PRESETS.findIndex(p => p.ap === +S.ap && p.fr === +S.fr)).replace('-1', '');
+    document.body.classList.toggle('red', !!S.red);
+  }
+  function fromInputs(){
+    for (const f of FIELDS){
+      const v = $(f).value;
+      if (NUMERIC.includes(f)){ const n = parseFloat(v); if (isFinite(n) && n > 0 || (f === 'minAlt' && n === 0)) S[f] = n; }
+      else S[f] = v;
+    }
+    for (const k of 'PUOX') S.cls[k] = $('cls-' + k).checked;
+    S.limitEp = $('limitEp').checked; S.hideIR = $('hideIR').checked;
+    if ($('date').value) S.date = $('date').value;
+  }
+  let timer;
+  function changed(){ clearTimeout(timer); timer = setTimeout(() => { fromInputs(); derived(); save(); recompute(); }, 250); }
+  document.querySelectorAll('#side input, #side select, #date').forEach(el => { if (el.id !== 'preset') el.addEventListener(el.type === 'text' || el.type === 'number' ? 'input' : 'change', changed); });
+  // typing a start time switches the window to a fixed start
+  $('startTime').addEventListener('input', () => { $('startMode').value = 'custom'; });
+  $('preset').addEventListener('change', () => { const p = PRESETS[$('preset').value]; if (p){ $('ap').value = p.ap; $('fr').value = p.fr; changed(); } });
+  $('red-btn').onclick = () => { S.red = !S.red; save(); toInputs(); drawDetail(); };
+
+  // ---- site dialog ----
+  $('loc-btn').onclick = () => { $('li-name').value = S.loc.name; $('li-lat').value = S.loc.lat; $('li-lon').value = S.loc.lon; $('ov').style.display = 'flex'; };
+  $('li-cancel').onclick = () => $('ov').style.display = 'none';
+  $('li-gps').onclick = () => { $('li-msg').textContent = 'Locating…'; navigator.geolocation.getCurrentPosition(p => { $('li-lat').value = p.coords.latitude.toFixed(4); $('li-lon').value = p.coords.longitude.toFixed(4); $('li-msg').textContent = 'Position filled in. Give it a name and save.'; }, () => $('li-msg').textContent = 'Could not get a position; type the coordinates.'); };
+  $('li-save').onclick = () => { const la = parseFloat($('li-lat').value), lo = parseFloat($('li-lon').value); if (!(Math.abs(la) <= 90 && Math.abs(lo) <= 180)){ $('li-msg').textContent = 'Latitude must be −90…90 and longitude −180…180.'; return; } S.loc = {name:$('li-name').value.trim() || `${la.toFixed(2)}, ${lo.toFixed(2)}`, lat:la, lon:lo}; $('ov').style.display = 'none'; save(); recompute(); };
+
+  // ---- compute ----
+  function recompute(){
+    W = nightWindow(S); E = equipment(S);
+    cands = filterCatalog(S, W, E);
+    rebuildNight();
+    if (S.startMode !== 'custom' && document.activeElement !== $('startTime')) $('startTime').value = fmtT(W.start);
+    const m = moonInfo(W.start);
+    $('loc-btn').textContent = S.loc.name;
+    $('night-info').textContent = `Window ${fmtT(W.start)}–${fmtT(W.end)} (${W.hours.toFixed(1)} h) · sunset ${W.ev.sunset ? fmtT(W.ev.sunset) : '—'} · Moon ${Math.round(m.illum * 100)}% ${m.waxing ? 'waxing' : 'waning'}`;
+    const e0 = E.eps[0];
+    $('eq-note').innerHTML = `Focal length <b>${Math.round(E.F)} mm</b>` + (E.eps.length ? ', ' + E.eps.map(e => `${e.fl} mm = <b>${Math.round(e.mag)}×</b>`).join(', ') : '') +
+      `.<br>Dawes limit ${E.dawes.toFixed(2)}″; with this seeing, equal pairs split from about <b>${E.base.toFixed(1)}″</b>, wider for unequal pairs.` +
+      `<br>Faintest star about <b>mag ${E.lm.toFixed(1)}</b>.` +
+      (E.eps.length ? `<br>Closest pair your eyepieces show as two: <b>${(EYE_ARCSEC / E.eps[E.eps.length - 1].mag).toFixed(1)}″</b>.` : '<br><span class="warn">Enter at least one eyepiece.</span>') +
+      (e0 && e0.pupil > 7 ? `<br><span class="warn">${e0.fl} mm gives a ${e0.pupil.toFixed(1)} mm exit pupil, larger than the eye can use.</span>` : '');
+    render();
+  }
+  function rebuildNight(){
+    const items = S.night.map(k => index.get(k)).filter(i => i !== undefined).map(i => evaluate(i, S, W, E));
+    night = schedule(items, W);
+  }
+  function inNight(r){ return S.night.includes(keyOf(r)); }
+  function toggleNight(r){ const k = keyOf(r), n = S.night.indexOf(k); if (n >= 0) S.night.splice(n, 1); else S.night.push(k); save(); rebuildNight(); render(); }
+
+  // ---- tables ----
+  const SORTS = {score:x => x.score, name:x => pairName(WDS[x.i]), con:x => WDS_META.cons[WDS[x.i][C.con]], m1:x => WDS[x.i][C.m1], m2:x => WDS[x.i][C.m2], sep:x => WDS[x.i][C.sep],
+    split:x => x.ratio, from:x => x.vis.from, alt:x => x.vis.maxAlt, cls:x => 'PUOX'.indexOf(WDS[x.i][C.cls])};
+  const MAXROWS = 400;
+  function render(){
+    $('tab-cand').classList.toggle('on', S.tab === 'cand'); $('tab-night').classList.toggle('on', S.tab === 'night');
+    $('tab-cand').textContent = `Candidates (${cands.length.toLocaleString()})`; $('tab-night').textContent = `Tonight's list (${night.length})`;
+    $('night-tools').style.display = S.tab === 'night' ? '' : 'none';
+    if (S.tab === 'cand') renderCands(); else renderNight();
+    drawDetail();
+  }
+  function renderCands(){
+    const f = SORTS[S.sort] || SORTS.score, d = S.sortDir;
+    cands.sort((a, b) => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * d; });
+    const th = [['', '', 'ns'], ['name', 'Pair'], ['con', 'Con'], ['cls', 'Category'], ['m1', 'Mag A', 'num'], ['m2', 'Mag B', 'num'], ['sep', 'Sep ″', 'num'], ['', 'PA °', 'num ns'], ['', 'Spectral', 'ns'], ['split', 'Split'], ['', 'Eyepiece', 'ns'], ['from', 'Above limit'], ['alt', 'Max alt', 'num'], ['score', 'Score', 'num']];
+    $('th').innerHTML = '<tr>' + th.map(([k, t, c]) => `<th class="${c || ''}" data-k="${k}">${t}${k && k === S.sort ? (d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr>';
+    const set = new Set(S.night);
+    $('tb').innerHTML = cands.slice(0, MAXROWS).map(x => { const r = WDS[x.i], k = keyOf(r);
+      return `<tr class="r${k === selKey ? ' sel' : ''}" data-i="${x.i}"><td><input type="checkbox" data-add="${x.i}" ${set.has(k) ? 'checked' : ''} title="Add to tonight's list"></td><td>${esc(pairName(r))}</td><td>${WDS_META.cons[r[C.con]]}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td>${esc(r[C.sp])}</td><td class="r-${x.rating}">${x.rating}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td>${fmtT(tAt(W, x.vis.from))}–${fmtT(tAt(W, x.vis.to))}</td><td class="num">${Math.round(x.vis.maxAlt)}°</td><td class="num">${Math.round(x.score)}</td></tr>`; }).join('');
+    $('status').textContent = cands.length ? (cands.length > MAXROWS ? `Showing the first ${MAXROWS} of ${cands.length.toLocaleString()} observable pairs in the current sort order. Tick pairs to add them to tonight's list, or use "Suggest tonight's list".` : `${cands.length} observable pairs. Tick pairs to add them to tonight's list.`) : 'No pairs pass the current filters. Loosen the eyepiece, separation or magnitude limits.';
+  }
+  function renderNight(){
+    $('th').innerHTML = '<tr>' + ['#', 'Time', 'Pair', 'Category', 'Mag A', 'Mag B', 'Sep ″', 'PA °', 'Alt / Az', 'Split', 'Eyepiece', 'Remarks', ''].map(t => `<th class="ns">${t}</th>`).join('') + '</tr>';
+    let h = '', con = -1;
+    night.forEach((x, n) => { const r = WDS[x.i], k = keyOf(r), aa = x.t != null ? altAz(r[C.ra], r[C.dec], S.loc.lat, W.lst0 + x.t * 15 * SID) : null;
+      if (r[C.con] !== con){ con = r[C.con]; h += `<tr class="grp"><td colspan="13">${WDS_META.cons[con]}</td></tr>`; }
+      const rem = esc(wdsRemarks(r)) + (x.flag ? ` <span class="warn">(${x.flag})</span>` : '');
+      h += `<tr class="r${k === selKey ? ' sel' : ''}" data-i="${x.i}"><td>${n + 1}</td><td>${x.t != null ? fmtT(tAt(W, x.t)) : '—'}</td><td>${esc(pairName(r))}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td>${aa ? Math.round(aa.alt) + '° / ' + Math.round(aa.az) + '°' : '—'}</td><td class="r-${x.rating}">${x.magOK ? x.rating : 'Too faint'}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td class="wrap">${rem}</td><td><button class="x" data-del="${x.i}" title="Remove">✕</button></td></tr>`; });
+    $('tb').innerHTML = h;
+    const bad = night.filter(x => x.flag).length;
+    $('status').innerHTML = night.length ? `${night.length} pairs for ${esc(S.loc.name)}, night of ${S.date}, ordered by constellation from west to east.` + (bad ? ` <span class="warn">${bad} cannot be fitted into the window.</span>` : '') + (W.lateEnd ? ' <span class="warn">The window runs past dawn twilight.</span>' : '') : 'Nothing on tonight\'s list yet. Use "Suggest tonight\'s list" in the left panel, or tick pairs under Candidates.';
+  }
+  $('th').addEventListener('click', e => { const k = e.target.dataset.k; if (!k || S.tab !== 'cand') return; if (S.sort === k) S.sortDir = -S.sortDir; else { S.sort = k; S.sortDir = (k === 'score' || k === 'alt' || k === 'split') ? -1 : 1; } save(); renderCands(); });
+  $('tb').addEventListener('click', e => {
+    const t = e.target;
+    if (t.dataset.add){ toggleNight(WDS[+t.dataset.add]); return; }
+    if (t.dataset.del){ toggleNight(WDS[+t.dataset.del]); return; }
+    const tr = t.closest('tr.r'); if (!tr) return;
+    selKey = keyOf(WDS[+tr.dataset.i]);
+    document.querySelectorAll('#tb tr.sel').forEach(x => x.classList.remove('sel')); tr.classList.add('sel');
+    drawDetail();
+  });
+  $('tab-cand').onclick = () => { S.tab = 'cand'; save(); render(); };
+  $('tab-night').onclick = () => { S.tab = 'night'; save(); render(); };
+  $('suggest').onclick = () => {
+    if (S.night.length && !confirm('Replace the current list with a new suggestion?')) return;
+    S.night = suggest(cands, S.N, S.perCon).map(x => keyOf(WDS[x.i])); S.tab = 'night'; save(); rebuildNight(); render();
+  };
+  $('clear').onclick = () => { if (confirm('Clear tonight\'s list?')){ S.night = []; save(); rebuildNight(); render(); } };
+  $('print').onclick = () => window.print();
+  $('csv').onclick = () => {
+    if (!night.length) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([toCSV(csvRows(night, S, W))], {type:'text/csv;charset=utf-8'}));
+    a.download = `double-stars_${S.date}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+
+  // ---- detail panel ----
+  function css(v){ return getComputedStyle(document.body).getPropertyValue(v).trim(); }
+  function drawDetail(){
+    const i = selKey ? index.get(selKey) : undefined, el = $('detail');
+    if (i === undefined) return;
+    const r = WDS[i], x = evaluate(i, S, W, E), sch = night.find(n => n.i === i);
+    const dm = Math.abs(r[C.m2] - r[C.m1]), need = reqSep(E, dm);
+    el.innerHTML = `<h2>${esc(pairName(r))}</h2><div class="sub">WDS ${r[C.id]} · ${WDS_META.cons[r[C.con]]}</div>
+      <div class="kv"><span>Category</span><span class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</span>
+      <span>RA / Dec</span><span>${fmtRA(r[C.ra])} ${fmtDec(r[C.dec])}</span>
+      <span>Magnitudes</span><span>${r[C.m1]} and ${r[C.m2]} (Δ ${dm.toFixed(1)})</span>
+      <span>Separation</span><span>${r[C.sep]}″ at PA ${r[C.pa] >= 0 ? r[C.pa] + '°' : '—'} (${r[C.last] || '—'})</span>
+      <span>Spectral type</span><span>${esc(r[C.sp]) || '—'}</span>
+      <span>Measures</span><span>${r[C.nobs]}, last in ${r[C.last] || '—'}</span>
+      <span>Split</span><span class="r-${x.rating}">${x.magOK ? x.rating : 'Too faint'} · needs about ${need.toFixed(1)}″ for this Δmag</span>
+      <span>Eyepiece</span><span>${epTxt(x)}</span>
+      <span>Above ${S.minAlt}°</span><span>${x.vis ? fmtT(tAt(W, x.vis.from)) + '–' + fmtT(tAt(W, x.vis.to)) + ', up to ' + Math.round(x.vis.maxAlt) + '°' : 'not during the window'}</span>
+      ${sch && sch.t != null ? `<span>Scheduled</span><span>${fmtT(tAt(W, sch.t))}</span>` : ''}</div>
+      <canvas id="cv-alt" height="150"></canvas><canvas id="cv-pa" height="190"></canvas>
+      <div class="note" style="margin-bottom:10px">${esc(wdsRemarks(r))}</div>
+      <div class="noprint"><button id="d-add">${inNight(r) ? 'Remove from tonight\'s list' : 'Add to tonight\'s list'}</button></div>
+      <div style="margin-top:10px;font-size:12px"><a target="_blank" rel="noopener" href="https://simbad.cds.unistra.fr/simbad/sim-coo?Coord=${r[C.ra]}+${r[C.dec] >= 0 ? '%2B' : ''}${r[C.dec]}&Radius=30&Radius.unit=arcsec">SIMBAD ↗</a> &nbsp; <a target="_blank" rel="noopener" href="https://aladin.cds.unistra.fr/AladinLite/?target=${r[C.ra]}%20${r[C.dec]}&fov=0.15&survey=P%2FDSS2%2Fcolor">Aladin ↗</a></div>`;
+    $('d-add').onclick = () => toggleNight(r);
+    drawAlt($('cv-alt'), r, sch); drawPA($('cv-pa'), r);
+  }
+  function setup(cv){ const w = cv.clientWidth, h = +cv.getAttribute('height'), dpr = window.devicePixelRatio || 1; cv.width = w * dpr; cv.height = h * dpr; cv.style.height = h + 'px'; const g = cv.getContext('2d'); g.scale(dpr, dpr); g.font = '10px sans-serif'; return [g, w, h]; }
+  function drawAlt(cv, r, sch){
+    const [g, w, h] = setup(cv), L = 26, R = 8, T = 8, B = 18, pw = w - L - R, ph = h - T - B;
+    const X = t => L + pw * t / W.hours, Y = a => T + ph * (1 - Math.max(0, a) / 90);
+    g.fillStyle = css('--bg3'); g.fillRect(L, Y(S.minAlt), pw, Y(0) - Y(S.minAlt));
+    g.strokeStyle = css('--bd'); g.fillStyle = css('--mu'); g.lineWidth = 1;
+    for (const a of [0, 30, 60, 90]){ g.beginPath(); g.moveTo(L, Y(a)); g.lineTo(L + pw, Y(a)); g.stroke(); g.fillText(a + '°', 3, Y(a) + 3); }
+    const first = Math.ceil(W.start.getTime() / 3600000) * 3600000;
+    for (let ms = first; ms <= W.end.getTime(); ms += 3600000){ const t = (ms - W.start.getTime()) / 3600000; g.beginPath(); g.moveTo(X(t), T); g.lineTo(X(t), T + ph); g.stroke(); g.fillText(pad(new Date(ms).getHours()) + 'h', X(t) - 8, h - 5); }
+    g.strokeStyle = css('--ac'); g.lineWidth = 2; g.beginPath();
+    for (let n = 0; n <= 60; n++){ const t = W.hours * n / 60, a = altAz(r[C.ra], r[C.dec], S.loc.lat, W.lst0 + t * 15 * SID).alt; n ? g.lineTo(X(t), Y(a)) : g.moveTo(X(t), Y(a)); }
+    g.stroke();
+    if (sch && sch.t != null && sch.t <= W.hours){ g.fillStyle = css('--or'); g.beginPath(); g.arc(X(sch.t), Y(altAz(r[C.ra], r[C.dec], S.loc.lat, W.lst0 + sch.t * 15 * SID).alt), 4, 0, 7); g.fill(); }
+  }
+  function drawPA(cv, r){
+    const [g, w, h] = setup(cv), cx = w / 2, cy = h / 2, R = h / 2 - 22;
+    g.strokeStyle = css('--bd'); g.beginPath(); g.arc(cx, cy, R, 0, 7); g.stroke();
+    g.fillStyle = css('--mu'); g.fillText('N', cx - 3, cy - R - 6); g.fillText('E', cx - R - 12, cy + 3); g.fillText('S', cx - 3, cy + R + 13); g.fillText('W', cx + R + 5, cy + 3);
+    g.fillText('North up, east left; mirror or rotate for your telescope', 6, h - 3);
+    const rad = m => Math.max(1.5, 7 - 0.55 * (m - 2));
+    g.fillStyle = css('--tx'); g.beginPath(); g.arc(cx, cy, rad(r[C.m1]), 0, 7); g.fill();
+    if (r[C.pa] >= 0){ const a = r[C.pa] * D2R, d = R * 0.7; g.beginPath(); g.arc(cx - d * Math.sin(a), cy - d * Math.cos(a), rad(r[C.m2]), 0, 7); g.fill(); }
+  }
+
+  // ---- start ----
+  const n = {P:0, U:0, O:0}; for (const r of WDS) if (n[r[C.cls]] !== undefined) n[r[C.cls]]++;
+  for (const k in n) $('n-' + k).textContent = n[k].toLocaleString();
+  $('cat-note').innerHTML = `Washington Double Star Catalog (USNO), ${WDS_META.rows.toLocaleString()} pairs to mag ${WDS_META.maxMag}. Catalogue file dated <b>${WDS_META.catalogDate}</b>. Refresh with <code>python tools/build_catalog.py --download</code>.<br><br>This research has made use of the Washington Double Star Catalog maintained at the U.S. Naval Observatory.`;
+  toInputs(); recompute();
+  window.addEventListener('resize', drawDetail);
+})();
+</script>
+</body>
+</html>
