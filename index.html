@@ -33,6 +33,7 @@ main{display:flex;flex:1;min-height:0}
 .chk{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;cursor:pointer}
 .note{font-size:11px;color:var(--mu);line-height:1.4;margin:4px 0 2px}
 .note b{color:var(--tx);font-weight:600}
+.desig{color:var(--mu);font-size:11px;white-space:nowrap}
 #center{flex:1;display:flex;flex-direction:column;min-width:0}
 #tabs{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-shrink:0}
 .tab{background:none;border:1px solid transparent;color:var(--mu)}
@@ -116,7 +117,7 @@ a:hover{text-decoration:underline}
   <div class="row"><span>Primary brighter than</span><input type="number" id="m1max" step="0.5" placeholder="any"></div>
   <div class="row"><span>Separation (″)</span><span><input type="number" id="sepMin" step="0.5" placeholder="min" style="width:56px"> – <input type="number" id="sepMax" step="1" placeholder="max" style="width:56px"></span></div>
   <div class="row"><span>Constellation</span><select id="con"></select></div>
-  <div class="row"><span>Find</span><input type="text" id="q" placeholder="STF 60, 00527-2400…"></div>
+  <div class="row"><span>Find</span><input type="text" id="q" placeholder="Eta Cas…, STF 60, 00527-2400" title="Star name, discoverer code or WDS number"></div>
   <label class="chk"><input type="checkbox" id="hideIR"> Hide pairs with infrared-only magnitudes</label>
 
   <div class="sec">Tonight's list</div>
@@ -155,6 +156,7 @@ a:hover{text-decoration:underline}
 </div></div>
 
 <script src="wds_data.js"></script>
+<script src="star_names.js"></script>
 <script id="app-js">
 'use strict';
 /* ============================================================
@@ -300,7 +302,7 @@ function filterCatalog(S, W, E){
     if (r[C.m1] > m1max || r[C.sep] < sMin || r[C.sep] > sMax) continue;
     if (Math.max(r[C.m1], r[C.m2]) > E.lm) continue;
     if (S.hideIR && r[C.flags].includes('K')) continue;
-    if (q && !(r[C.id].startsWith(q) || (r[C.disc] + ' ' + r[C.comp]).startsWith(q))) continue;
+    if (q && !(r[C.id].startsWith(q) || (r[C.disc] + ' ' + r[C.comp]).startsWith(q) || starName(r).toUpperCase().includes(q))) continue;
     const ratio = r[C.sep] / reqSep(E, Math.abs(r[C.m2] - r[C.m1]));
     if (ratio < minR) continue;
     const ep = pickEyepiece(E, r[C.sep]);
@@ -384,15 +386,17 @@ function fmtT(d){ return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 function tAt(W, h){ return new Date(W.start.getTime() + h * 3600000); }
 function pairName(r){ return r[C.disc] + (r[C.comp] ? ' ' + r[C.comp] : ''); }
 function keyOf(r){ return r[C.id] + '|' + r[C.disc] + '|' + r[C.comp]; }
+// Common name (e.g. "Eta Cassiopeiae") for the well-known pairs listed in star_names.js; '' for the rest.
+function starName(r){ return (typeof STAR_NAMES !== 'undefined' && STAR_NAMES[keyOf(r)]) || ''; }
 function epTxt(x){ return x.ep ? `${x.ep.fl} mm (${Math.round(x.ep.mag)}×)` : `needs ${Math.ceil(EYE_ARCSEC / Math.max(WDS[x.i][C.sep], 0.01))}×`; }
 
 function csvRows(list, S, W){
-  const head = ['Order', 'Time', 'Pair', 'WDS', 'Constellation', 'RA (J2000)', 'Dec (J2000)', 'Mag A', 'Mag B', 'Delta mag', 'Sep (arcsec)', 'PA (deg)',
+  const head = ['Order', 'Time', 'Name', 'Pair', 'WDS', 'Constellation', 'RA (J2000)', 'Dec (J2000)', 'Mag A', 'Mag B', 'Delta mag', 'Sep (arcsec)', 'PA (deg)',
     'Spectral type', 'Category', 'Split', 'Eyepiece', 'Alt (deg)', 'Az (deg)', 'Visible from', 'Visible until', 'Last measured', 'Measures', 'Remarks', 'Schedule note'];
   const rows = [head];
   list.forEach((x, n) => {
     const r = WDS[x.i], aa = x.t != null ? altAz(r[C.ra], r[C.dec], S.loc.lat, W.lst0 + x.t * 15 * SID) : null;
-    rows.push([n + 1, x.t != null ? fmtT(tAt(W, x.t)) : '', pairName(r), r[C.id], WDS_META.cons[r[C.con]], fmtRA(r[C.ra]), fmtDec(r[C.dec]),
+    rows.push([n + 1, x.t != null ? fmtT(tAt(W, x.t)) : '', starName(r), pairName(r), r[C.id], WDS_META.cons[r[C.con]], fmtRA(r[C.ra]), fmtDec(r[C.dec]),
       r[C.m1], r[C.m2], Math.abs(r[C.m2] - r[C.m1]).toFixed(1), r[C.sep], r[C.pa] >= 0 ? r[C.pa] : '', r[C.sp], CLS_NAME[r[C.cls]], x.rating, epTxt(x),
       aa ? Math.round(aa.alt) : '', aa ? Math.round(aa.az) : '', x.vis ? fmtT(tAt(W, x.vis.from)) : '', x.vis ? fmtT(tAt(W, x.vis.to)) : '',
       r[C.last] || '', r[C.nobs], wdsRemarks(r), x.flag || '']);
@@ -401,7 +405,7 @@ function csvRows(list, S, W){
 }
 function toCSV(rows){ return '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\r\n') + '\r\n'; }
 
-if (typeof module !== 'undefined') module.exports = {C, DEFAULTS, nightWindow, equipment, reqSep, filterCatalog, suggest, schedule, evaluate, csvRows, toCSV, wdsRemarks, visibility, altAz, fmtRA, fmtDec, sunAlt, moonInfo, keyOf, pairName};
+if (typeof module !== 'undefined') module.exports = {C, DEFAULTS, nightWindow, equipment, reqSep, filterCatalog, suggest, schedule, evaluate, csvRows, toCSV, wdsRemarks, visibility, altAz, fmtRA, fmtDec, sunAlt, moonInfo, keyOf, pairName, starName};
 
 /* ============================================================
    User interface
@@ -413,6 +417,7 @@ if (typeof document !== 'undefined') (function(){
     return;
   }
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  function pairHTML(r){ const n = starName(r); return n ? `<b>${esc(n)}</b> <span class="desig">${esc(pairName(r))}</span>` : esc(pairName(r)); }
   let S = JSON.parse(JSON.stringify(DEFAULTS)), W, E, cands = [], night = [], selKey = null;
   try { const o = JSON.parse(localStorage.getItem('dsp_state') || '{}'); S = Object.assign(S, o); S.cls = Object.assign({}, DEFAULTS.cls, o.cls); } catch (e) {}
   if (!S.date){ const n = new Date(); if (n.getHours() < 6) n.setDate(n.getDate() - 1); S.date = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`; }
@@ -483,7 +488,7 @@ if (typeof document !== 'undefined') (function(){
   function toggleNight(r){ const k = keyOf(r), n = S.night.indexOf(k); if (n >= 0) S.night.splice(n, 1); else S.night.push(k); save(); rebuildNight(); render(); }
 
   // ---- tables ----
-  const SORTS = {score:x => x.score, name:x => pairName(WDS[x.i]), con:x => WDS_META.cons[WDS[x.i][C.con]], m1:x => WDS[x.i][C.m1], m2:x => WDS[x.i][C.m2], sep:x => WDS[x.i][C.sep],
+  const SORTS = {score:x => x.score, name:x => { const r = WDS[x.i]; return (starName(r) ? '0' + starName(r) : '1') + pairName(r); }, con:x => WDS_META.cons[WDS[x.i][C.con]], m1:x => WDS[x.i][C.m1], m2:x => WDS[x.i][C.m2], sep:x => WDS[x.i][C.sep],
     split:x => x.ratio, from:x => x.vis.from, alt:x => x.vis.maxAlt, cls:x => 'PUOX'.indexOf(WDS[x.i][C.cls])};
   const MAXROWS = 400;
   function render(){
@@ -500,7 +505,7 @@ if (typeof document !== 'undefined') (function(){
     $('th').innerHTML = '<tr>' + th.map(([k, t, c]) => `<th class="${c || ''}" data-k="${k}">${t}${k && k === S.sort ? (d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr>';
     const set = new Set(S.night);
     $('tb').innerHTML = cands.slice(0, MAXROWS).map(x => { const r = WDS[x.i], k = keyOf(r);
-      return `<tr class="r${k === selKey ? ' sel' : ''}" data-i="${x.i}"><td><input type="checkbox" data-add="${x.i}" ${set.has(k) ? 'checked' : ''} title="Add to tonight's list"></td><td>${esc(pairName(r))}</td><td>${WDS_META.cons[r[C.con]]}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td>${esc(r[C.sp])}</td><td class="r-${x.rating}">${x.rating}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td>${fmtT(tAt(W, x.vis.from))}–${fmtT(tAt(W, x.vis.to))}</td><td class="num">${Math.round(x.vis.maxAlt)}°</td><td class="num">${Math.round(x.score)}</td></tr>`; }).join('');
+      return `<tr class="r${k === selKey ? ' sel' : ''}" data-i="${x.i}"><td><input type="checkbox" data-add="${x.i}" ${set.has(k) ? 'checked' : ''} title="Add to tonight's list"></td><td>${pairHTML(r)}</td><td>${WDS_META.cons[r[C.con]]}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td>${esc(r[C.sp])}</td><td class="r-${x.rating}">${x.rating}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td>${fmtT(tAt(W, x.vis.from))}–${fmtT(tAt(W, x.vis.to))}</td><td class="num">${Math.round(x.vis.maxAlt)}°</td><td class="num">${Math.round(x.score)}</td></tr>`; }).join('');
     $('status').textContent = cands.length ? (cands.length > MAXROWS ? `Showing the first ${MAXROWS} of ${cands.length.toLocaleString()} observable pairs in the current sort order. Tick pairs to add them to tonight's list, or use "Suggest tonight's list".` : `${cands.length} observable pairs. Tick pairs to add them to tonight's list.`) : 'No pairs pass the current filters. Loosen the eyepiece, separation or magnitude limits.';
   }
   function renderNight(){
@@ -509,7 +514,7 @@ if (typeof document !== 'undefined') (function(){
     night.forEach((x, n) => { const r = WDS[x.i], k = keyOf(r), aa = x.t != null ? altAz(r[C.ra], r[C.dec], S.loc.lat, W.lst0 + x.t * 15 * SID) : null;
       if (r[C.con] !== con){ con = r[C.con]; h += `<tr class="grp"><td colspan="13">${WDS_META.cons[con]}</td></tr>`; }
       const rem = esc(wdsRemarks(r)) + (x.flag ? ` <span class="warn">(${x.flag})</span>` : '');
-      h += `<tr class="r${k === selKey ? ' sel' : ''}" data-i="${x.i}"><td>${n + 1}</td><td>${x.t != null ? fmtT(tAt(W, x.t)) : '—'}</td><td>${esc(pairName(r))}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td>${aa ? Math.round(aa.alt) + '° / ' + Math.round(aa.az) + '°' : '—'}</td><td class="r-${x.rating}">${x.magOK ? x.rating : 'Too faint'}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td class="wrap">${rem}</td><td><button class="x" data-del="${x.i}" title="Remove">✕</button></td></tr>`; });
+      h += `<tr class="r${k === selKey ? ' sel' : ''}" data-i="${x.i}"><td>${n + 1}</td><td>${x.t != null ? fmtT(tAt(W, x.t)) : '—'}</td><td>${pairHTML(r)}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td>${aa ? Math.round(aa.alt) + '° / ' + Math.round(aa.az) + '°' : '—'}</td><td class="r-${x.rating}">${x.magOK ? x.rating : 'Too faint'}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td class="wrap">${rem}</td><td><button class="x" data-del="${x.i}" title="Remove">✕</button></td></tr>`; });
     $('tb').innerHTML = h;
     const bad = night.filter(x => x.flag).length;
     $('status').innerHTML = night.length ? `${night.length} pairs for ${esc(S.loc.name)}, night of ${S.date}, ordered by constellation from west to east.` + (bad ? ` <span class="warn">${bad} cannot be fitted into the window.</span>` : '') + (W.lateEnd ? ' <span class="warn">The window runs past dawn twilight.</span>' : '') : 'Nothing on tonight\'s list yet. Use "Suggest tonight\'s list" in the left panel, or tick pairs under Candidates.';
@@ -546,7 +551,7 @@ if (typeof document !== 'undefined') (function(){
     if (i === undefined) return;
     const r = WDS[i], x = evaluate(i, S, W, E), sch = night.find(n => n.i === i);
     const dm = Math.abs(r[C.m2] - r[C.m1]), need = reqSep(E, dm);
-    el.innerHTML = `<h2>${esc(pairName(r))}</h2><div class="sub">WDS ${r[C.id]} · ${WDS_META.cons[r[C.con]]}</div>
+    el.innerHTML = `<h2>${esc(starName(r) || pairName(r))}</h2><div class="sub">${starName(r) ? esc(pairName(r)) + ' · ' : ''}WDS ${r[C.id]} · ${WDS_META.cons[r[C.con]]}</div>
       <div class="kv"><span>Category</span><span class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</span>
       <span>RA / Dec</span><span>${fmtRA(r[C.ra])} ${fmtDec(r[C.dec])}</span>
       <span>Magnitudes</span><span>${r[C.m1]} and ${r[C.m2]} (Δ ${dm.toFixed(1)})</span>
