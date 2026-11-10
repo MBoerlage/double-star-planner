@@ -34,6 +34,7 @@ main{display:flex;flex:1;min-height:0}
 .note{font-size:11px;color:var(--mu);line-height:1.4;margin:4px 0 2px}
 .note b{color:var(--tx);font-weight:600}
 .desig{color:var(--mu);font-size:11px;white-space:nowrap}
+tr.off td{color:var(--dm)}tr.off td b{color:var(--mu)}
 #center{flex:1;display:flex;flex-direction:column;min-width:0}
 #tabs{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-shrink:0}
 .tab{background:none;border:1px solid transparent;color:var(--mu)}
@@ -131,6 +132,7 @@ a:hover{text-decoration:underline}
   <div id="tabs">
     <button class="tab" id="tab-cand">Candidates</button>
     <button class="tab" id="tab-night">Tonight's list</button>
+    <button class="tab" id="tab-al" title="The Astronomical League Double Star Observing Program list">AL Double Star</button>
     <span class="sp"></span>
     <span id="night-tools" style="display:none">
       <button id="csv" class="pri">Export CSV</button>
@@ -157,6 +159,7 @@ a:hover{text-decoration:underline}
 
 <script src="wds_data.js"></script>
 <script src="star_names.js"></script>
+<script src="al_double_star.js"></script>
 <script id="app-js">
 'use strict';
 /* ============================================================
@@ -423,6 +426,7 @@ if (typeof document !== 'undefined') (function(){
   if (!S.date){ const n = new Date(); if (n.getHours() < 6) n.setDate(n.getDate() - 1); S.date = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`; }
   const save = () => { try { localStorage.setItem('dsp_state', JSON.stringify(S)); } catch (e) {} };
   const index = new Map(); WDS.forEach((r, i) => index.set(keyOf(r), i));
+  const AL = typeof AL_DSOP !== 'undefined' ? AL_DSOP : [];
 
   // ---- inputs ----
   const FIELDS = ['ap', 'fr', 'eps', 'nelm', 'seeing', 'minRating', 'startMode', 'startTime', 'endTime', 'minAlt', 'minVis', 'm1max', 'sepMin', 'sepMax', 'con', 'q', 'N', 'perCon'];
@@ -493,9 +497,11 @@ if (typeof document !== 'undefined') (function(){
   const MAXROWS = 400;
   function render(){
     $('tab-cand').classList.toggle('on', S.tab === 'cand'); $('tab-night').classList.toggle('on', S.tab === 'night');
+    $('tab-al').style.display = AL.length ? '' : 'none'; $('tab-al').classList.toggle('on', S.tab === 'al'); $('tab-al').textContent = `AL Double Star (${AL.length})`;
+    if (S.tab === 'al' && !AL.length) S.tab = 'cand';
     $('tab-cand').textContent = `Candidates (${cands.length.toLocaleString()})`; $('tab-night').textContent = `Tonight's list (${night.length})`;
     $('night-tools').style.display = S.tab === 'night' ? '' : 'none';
-    if (S.tab === 'cand') renderCands(); else renderNight();
+    if (S.tab === 'cand') renderCands(); else if (S.tab === 'al') renderAL(); else renderNight();
     drawDetail();
   }
   function renderCands(){
@@ -507,6 +513,20 @@ if (typeof document !== 'undefined') (function(){
     $('tb').innerHTML = cands.slice(0, MAXROWS).map(x => { const r = WDS[x.i], k = keyOf(r);
       return `<tr class="r${k === selKey ? ' sel' : ''}" data-i="${x.i}"><td><input type="checkbox" data-add="${x.i}" ${set.has(k) ? 'checked' : ''} title="Add to tonight's list"></td><td>${pairHTML(r)}</td><td>${WDS_META.cons[r[C.con]]}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td>${esc(r[C.sp])}</td><td class="r-${x.rating}">${x.rating}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td>${fmtT(tAt(W, x.vis.from))}–${fmtT(tAt(W, x.vis.to))}</td><td class="num">${Math.round(x.vis.maxAlt)}°</td><td class="num">${Math.round(x.score)}</td></tr>`; }).join('');
     $('status').textContent = cands.length ? (cands.length > MAXROWS ? `Showing the first ${MAXROWS} of ${cands.length.toLocaleString()} observable pairs in the current sort order. Tick pairs to add them to tonight's list, or use "Suggest tonight's list".` : `${cands.length} observable pairs. Tick pairs to add them to tonight's list.`) : 'No pairs pass the current filters. Loosen the eyepiece, separation or magnitude limits.';
+  }
+  // ---- Astronomical League Double Star Observing Program list (al_double_star.js), shown in AL order whatever the filters say ----
+  function renderAL(){
+    $('th').innerHTML = '<tr>' + [['', 'ns'], ['No.', 'num ns'], ['Name', 'ns'], ['Pair', 'ns'], ['Con', 'ns'], ['Category', 'ns'], ['Mag A', 'num ns'], ['Mag B', 'num ns'], ['Sep ″', 'num ns'], ['PA °', 'num ns'], ['Split', 'ns'], ['Eyepiece', 'ns'], ['Above limit tonight', 'ns'], ['Max alt', 'num ns']].map(([t, c]) => `<th class="${c}">${t}</th>`).join('') + '</tr>';
+    const set = new Set(S.night); let h = '', up = 0;
+    for (const [no, name, keys] of AL){
+      let any = false;
+      keys.forEach((k, n) => { const i = index.get(k); if (i === undefined) return;
+        const r = WDS[i], x = evaluate(i, S, W, E); if (x.vis) any = true;
+        h += `<tr class="r${k === selKey ? ' sel' : ''}${x.vis ? '' : ' off'}" data-i="${i}"><td><input type="checkbox" data-add="${i}" ${set.has(k) ? 'checked' : ''} title="Add to tonight's list"></td><td class="num">${n ? '' : no}</td><td>${n ? '' : '<b>' + esc(name) + '</b>'}</td><td>${esc(pairName(r))}</td><td>${WDS_META.cons[r[C.con]]}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td class="r-${x.rating}">${x.magOK ? x.rating : 'Too faint'}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td>${x.vis ? fmtT(tAt(W, x.vis.from)) + '–' + fmtT(tAt(W, x.vis.to)) : 'not in this window'}</td><td class="num">${x.vis ? Math.round(x.vis.maxAlt) + '°' : ''}</td></tr>`; });
+      if (any) up++;
+    }
+    $('tb').innerHTML = h;
+    $('status').textContent = `Astronomical League Double Star Observing Program: ${AL.length} entries in AL order, ${up} above your altitude limit during tonight's window (the rest are greyed). The filters on the left do not apply here. Tick pairs to add them to tonight's list.`;
   }
   function renderNight(){
     $('th').innerHTML = '<tr>' + ['#', 'Time', 'Pair', 'Category', 'Mag A', 'Mag B', 'Sep ″', 'PA °', 'Alt / Az', 'Split', 'Eyepiece', 'Remarks', ''].map(t => `<th class="ns">${t}</th>`).join('') + '</tr>';
@@ -531,6 +551,7 @@ if (typeof document !== 'undefined') (function(){
   });
   $('tab-cand').onclick = () => { S.tab = 'cand'; save(); render(); };
   $('tab-night').onclick = () => { S.tab = 'night'; save(); render(); };
+  $('tab-al').onclick = () => { S.tab = 'al'; save(); render(); };
   $('suggest').onclick = () => {
     if (S.night.length && !confirm('Replace the current list with a new suggestion?')) return;
     S.night = suggest(cands, S.N, S.perCon).map(x => keyOf(WDS[x.i])); S.tab = 'night'; save(); rebuildNight(); render();

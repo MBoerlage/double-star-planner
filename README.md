@@ -10,5 +10,8 @@ Run `Update WDS catalogue.bat` (or `python tools/build_catalog.py --download`), 
 ## Star names
 `star_names.js` gives common names (Eta Cassiopeiae, Beta Cygni…) to the well-known pairs, taken from the Astronomical League Double Star Observing Program list. It is separate from `wds_data.js`, so a catalogue update keeps the names. Upload it alongside `index.html`.
 
+## AL Double Star tab
+`al_double_star.js` holds the Astronomical League Double Star Observing Program list (200 entries), shown on its own tab in AL order. Upload it alongside `index.html` too.
+
 ## Credit
 This research has made use of the Washington Double Star Catalog maintained at the U.S. Naval Observatory.
