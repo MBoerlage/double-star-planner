@@ -518,15 +518,16 @@ if (typeof document !== 'undefined') (function(){
   function renderAL(){
     $('th').innerHTML = '<tr>' + [['', 'ns'], ['No.', 'num ns'], ['Name', 'ns'], ['Pair', 'ns'], ['Con', 'ns'], ['Category', 'ns'], ['Mag A', 'num ns'], ['Mag B', 'num ns'], ['Sep ″', 'num ns'], ['PA °', 'num ns'], ['Split', 'ns'], ['Eyepiece', 'ns'], ['Above limit tonight', 'ns'], ['Max alt', 'num ns']].map(([t, c]) => `<th class="${c}">${t}</th>`).join('') + '</tr>';
     const set = new Set(S.night); let h = '', up = 0;
-    for (const [no, name, keys] of AL){
+    for (const [no, name, keys, extra = [], stars] of AL){
       let any = false;
-      keys.forEach((k, n) => { const i = index.get(k); if (i === undefined) return;
+      const sys = stars ? ` <span class="desig">${['', '', 'double', 'triple', 'quadruple'][stars.length] || stars.length + ' stars'}: ${esc(stars.join(', '))}</span>` : '';
+      keys.concat(extra).forEach((k, n) => { const added = n >= keys.length; const i = index.get(k); if (i === undefined) return;
         const r = WDS[i], x = evaluate(i, S, W, E); if (x.vis) any = true;
-        h += `<tr class="r${k === selKey ? ' sel' : ''}${x.vis ? '' : ' off'}" data-i="${i}"><td><input type="checkbox" data-add="${i}" ${set.has(k) ? 'checked' : ''} title="Add to tonight's list"></td><td class="num">${n ? '' : no}</td><td>${n ? '' : '<b>' + esc(name) + '</b>'}</td><td>${esc(pairName(r))}</td><td>${WDS_META.cons[r[C.con]]}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td class="r-${x.rating}">${x.magOK ? x.rating : 'Too faint'}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td>${x.vis ? fmtT(tAt(W, x.vis.from)) + '–' + fmtT(tAt(W, x.vis.to)) : 'not in this window'}</td><td class="num">${x.vis ? Math.round(x.vis.maxAlt) + '°' : ''}</td></tr>`; });
+        h += `<tr class="r${k === selKey ? ' sel' : ''}${x.vis ? '' : ' off'}" data-i="${i}"><td><input type="checkbox" data-add="${i}" ${set.has(k) ? 'checked' : ''} title="Add to tonight's list"></td><td class="num">${n ? '' : no}</td><td>${n ? '' : '<b>' + esc(name) + '</b>' + sys}</td><td>${esc(pairName(r))}${added ? ' <span class="desig" title="A pair between two of the listed stars that the AL sheet does not give">not on AL sheet</span>' : ''}</td><td>${WDS_META.cons[r[C.con]]}</td><td class="c-${r[C.cls]}">${CLS_NAME[r[C.cls]]}</td><td class="num">${r[C.m1].toFixed(1)}</td><td class="num">${r[C.m2].toFixed(1)}</td><td class="num">${r[C.sep]}</td><td class="num">${r[C.pa] >= 0 ? r[C.pa] : ''}</td><td class="r-${x.rating}">${x.magOK ? x.rating : 'Too faint'}</td><td${x.ep ? '' : ' class="warn"'}>${epTxt(x)}</td><td>${x.vis ? fmtT(tAt(W, x.vis.from)) + '–' + fmtT(tAt(W, x.vis.to)) : 'not in this window'}</td><td class="num">${x.vis ? Math.round(x.vis.maxAlt) + '°' : ''}</td></tr>`; });
       if (any) up++;
     }
     $('tb').innerHTML = h;
-    $('status').textContent = `Astronomical League Double Star Observing Program: ${AL.length} entries in AL order, ${up} above your altitude limit during tonight's window (the rest are greyed). The filters on the left do not apply here. Tick pairs to add them to tonight's list.`;
+    $('status').textContent = `Astronomical League Double Star Observing Program: ${AL.length} entries in AL order, ${up} above your altitude limit during tonight's window (the rest are greyed). The filters on the left do not apply here. Multiple stars get one row per pair. Tick pairs to add them to tonight's list.`;
   }
   function renderNight(){
     $('th').innerHTML = '<tr>' + ['#', 'Time', 'Pair', 'Category', 'Mag A', 'Mag B', 'Sep ″', 'PA °', 'Alt / Az', 'Split', 'Eyepiece', 'Remarks', ''].map(t => `<th class="ns">${t}</th>`).join('') + '</tr>';
@@ -604,15 +605,45 @@ if (typeof document !== 'undefined') (function(){
     g.stroke();
     if (sch && sch.t != null && sch.t <= W.hours){ g.fillStyle = css('--or'); g.beginPath(); g.arc(X(sch.t), Y(altAz(r[C.ra], r[C.dec], S.loc.lat, W.lst0 + sch.t * 15 * SID).alt), 4, 0, 7); g.fill(); }
   }
+  // Every catalogued star of the same WDS system, placed relative to the chosen pair's primary (arcsec; x east, y north).
+  let sysIdx = null;
+  const sidesOf = c => c.includes(',') ? c.split(',') : (c.match(/[A-Z][a-z]?\d?/g) || []);
+  function systemStars(r){
+    if (!sysIdx){ sysIdx = new Map(); WDS.forEach((w, n) => { const a = sysIdx.get(w[C.id]); a ? a.push(n) : sysIdx.set(w[C.id], [n]); }); }
+    const me = sidesOf(r[C.comp]); if (me.length !== 2 || r[C.pa] < 0) return null;
+    const pos = new Map([[me[0], {x:0, y:0, m:r[C.m1], sel:true}]]);
+    const get = t => pos.get(t) || (t.length > 1 ? pos.get(t[0]) : undefined);
+    const rows = [r].concat((sysIdx.get(r[C.id]) || []).map(n => WDS[n]).filter(w => w !== r && w[C.pa] >= 0));
+    for (let pass = 0, moved = true; moved && pass < 6; pass++){ moved = false;
+      for (const w of rows){ const t = sidesOf(w[C.comp]); if (t.length !== 2) continue;
+        const a = w[C.pa] * D2R, dx = w[C.sep] * Math.sin(a), dy = w[C.sep] * Math.cos(a), P = get(t[0]), Q = get(t[1]);
+        if (P && !pos.has(t[1]) && !Q){ pos.set(t[1], {x:P.x + dx, y:P.y + dy, m:w[C.m2], sel:w === r}); moved = true; }
+        else if (Q && !pos.has(t[0]) && !P){ pos.set(t[0], {x:Q.x - dx, y:Q.y - dy, m:w[C.m1]}); moved = true; }
+      }
+    }
+    // Other members are shown when they are within 4x the pair's separation and no more than 4 magnitudes fainter than the pair (and within reach of the telescope).
+    const lim = Math.max(4 * r[C.sep], 1), mlim = Math.min(E.lm, Math.max(r[C.m1], r[C.m2]) + 4), out = [];
+    for (const [t, s] of pos) if (s.sel || (!/[a-z]/.test(t) && s.m <= mlim && Math.hypot(s.x, s.y) <= lim)) out.push({t, ...s});
+    return out;
+  }
   function drawPA(cv, r){
     const [g, w, h] = setup(cv), cx = w / 2, cy = h / 2, R = h / 2 - 22;
     g.strokeStyle = css('--bd'); g.beginPath(); g.arc(cx, cy, R, 0, 7); g.stroke();
     g.fillStyle = css('--mu'); g.fillText('N', cx - 3, cy - R - 6); g.fillText('E', cx - R - 12, cy + 3); g.fillText('S', cx - 3, cy + R + 13); g.fillText('W', cx + R + 5, cy + 3);
     g.fillText('North up, east left; mirror or rotate for your telescope', 6, h - 3);
     const rad = m => Math.max(1.5, 7 - 0.55 * (m - 2));
-    g.fillStyle = css('--tx'); g.beginPath(); g.arc(cx, cy, rad(r[C.m1]), 0, 7); g.fill();
-    if (r[C.pa] >= 0){ const a = r[C.pa] * D2R, d = R * 0.7; g.beginPath(); g.arc(cx - d * Math.sin(a), cy - d * Math.cos(a), rad(r[C.m2]), 0, 7); g.fill(); }
+    const stars = systemStars(r);
+    if (!stars){ g.fillStyle = css('--tx'); g.beginPath(); g.arc(cx, cy, rad(r[C.m1]), 0, 7); g.fill();
+      if (r[C.pa] >= 0){ const a = r[C.pa] * D2R, d = R * 0.7; g.beginPath(); g.arc(cx - d * Math.sin(a), cy - d * Math.cos(a), rad(r[C.m2]), 0, 7); g.fill(); }
+      return; }
+    // To scale: the farthest star shown sits at 80% of the circle. The chosen pair is bright, other members of the system are dimmer and lettered.
+    const far = Math.max(...stars.map(s => Math.hypot(s.x, s.y))) || 1, k = 0.8 * R / far, multi = stars.length > 2;
+    for (const s of stars.sort((a, b) => (a.sel ? 1 : 0) - (b.sel ? 1 : 0))){ const px = cx - s.x * k, py = cy - s.y * k, q = rad(s.m);
+      g.fillStyle = css(s.sel ? '--tx' : '--mu'); g.beginPath(); g.arc(px, py, q, 0, 7); g.fill();
+      if (multi){ g.fillStyle = css(s.sel ? '--tx' : '--mu'); g.fillText(s.t, px + q + 3, py - q - 1); } }
+    g.fillStyle = css('--mu'); g.fillText(`circle ${(2 * R / k).toFixed(far < 5 ? 1 : 0)}″ across` + (multi ? ' · grey: other stars of this system' : ''), 6, 11);
   }
+
 
   // ---- start ----
   const n = {P:0, U:0, O:0}; for (const r of WDS) if (n[r[C.cls]] !== undefined) n[r[C.cls]]++;
